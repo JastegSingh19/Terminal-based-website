@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terminal</title>
+    <style>
+        body {
+            background-color: black;
+            color: #00FF00;
+            font-family: monospace;
+            padding: 16px;
+        }
+        .top-right {
+            position: absolute;
+        }
+        .top-right button {
+            background-color: #00FF00;
+            color: black;
+            border: none;
+            padding: 8px 16px;
+            margin-left: 8px;
+            cursor: pointer;
+        }
+        .top-right button:hover{
+        background-color: black;
+        color: #00FF00;
+        }
+        input[type="text"] {
+            background-color: black;
+            border: none;
+            color: #00FF00;
+            font-family: monospace;
+            font-size: 16px;
+            width: 100%;
+            outline: none;
+        }
+        #terminal {
+            margin-top: 10px;
+            white-space: pre;
+            overflow-y: scroll;
+            height: 400px; /* Set the height to control scrollable area */
+            border: 1px solid #00FF00; /* Add a border for a terminal-like appearance */
+        }
+        .error {
+            color: red; /* Use red color for error messages */
+        }
+    </style>
+</head>
+<body>
+    <div id="terminal"></div>
+    <input type="text" id="input" autofocus onkeydown="processInput(event)">
+    {% if username %}
+        <p>Welcome, {{ username }}. This is the web terminal which can be used by your mobile phone anytime, anywhere!</p>
+    {% endif %}
+    <div class="top-right">
+        <button onclick="window.location.href='/login'">Login</button>
+        <button onclick="window.location.href='/signup'">Signup</button>
+    </div>
+
+    <script>
+        const inputElement = document.getElementById('input');
+        const terminalElement = document.getElementById('terminal');
+
+        async function processInput(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                const command = inputElement.value;
+                inputElement.value = '';
+
+                // Send the command to the server for execution
+                const response = await fetch('/execute_command', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `command=${encodeURIComponent(command)}`,
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+
+                    // Display the server's response in the terminal
+                    const commandOutput = `$ ${command}\n${result.result}\n`;
+                    terminalElement.innerHTML += commandOutput;
+                } else {
+                    const errorMessage = 'Error executing command\n';
+                    const errorOutput = `${errorMessage}<span class="error">${response.statusText}</span>\n`;
+                    terminalElement.innerHTML += errorOutput;
+                }
+
+                // Scroll to the bottom to show the latest output or error
+                terminalElement.scrollTop = terminalElement.scrollHeight;
+            }
+        }
+    </script>
+</body>
+</html>
