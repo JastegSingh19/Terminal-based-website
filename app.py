@@ -1,10 +1,15 @@
+import re
+
 from flask import Flask, render_template, request, redirect, url_for, flash, make_response, jsonify, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import os
+import nltk
+from nltk.tokenize import word_tokenize, RegexpTokenizer
 import subprocess
 
+# nltk.download("maxent_ne_chunker",download_dir='/content/nltk_data/')
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'  # Use SQLite for simplicity
@@ -68,6 +73,22 @@ def signup():
         return redirect(url_for('login'))
 
     return render_template('signup.html')
+
+
+command_mapping = {
+    'cd': ('change', 'directory'),
+    'touch': ('create', 'file'),
+    'cat': ('read', 'file'),
+    'ls': ('list', 'files'),
+    'rm': ('remove', 'file'),
+    'pwd': ('directory','information'),
+    'mkdir': ('make','directory'),
+    'rename': ('rename','file'),
+    'echo': ('print','text'),
+    'echo': ('print','sentence'),
+    'echo': ('print','line'),
+    # Add more commands and their associated verb-entity pairs as needed
+}
 
 
 @app.route('/logout')
@@ -181,6 +202,33 @@ def execute_rm(command):
     return jsonify({"result": result})
 
 
+def process_command_nltk(command):
+    tokens = nltk.word_tokenize(command)  # Tokenize the sentence into words
+
+    # Look for multi-word expressions (phrases)
+    tagged = nltk.pos_tag(tokens, tagset='universal')
+    expressions = []
+    current_expression = []
+    print(tagged)
+    for word, tag in tagged:
+        if tag.startswith('N') or tag.startswith('V'):  # Consider nouns and verbs
+            expressions.append(word)
+        else:
+            if len(current_expression) >= 1:
+                expressions.append(' '.join(current_expression))
+            current_expression = []
+    print(expressions)
+
+    return expressions
+def extract_strings_within_quotes(input_string):
+    # Use regular expression to find strings within double quotes
+    matches = re.findall(r'"([^"]*)"', input_string)
+
+    # Concatenate the extracted strings into a single string
+    extracted_string = ' '.join(matches)
+
+    return extracted_string
+
 @app.route('/execute_command', methods=['POST'])
 def execute_command():
     command = request.form.get('command').strip()
@@ -217,10 +265,63 @@ def execute_command():
             return jsonify({"result": result})
         except subprocess.CalledProcessError as e:
             return make_response(jsonify({"error": f"Error executing 'ls' command: {e.output}"}), 500)
+    else:
+        result = process_command_nltk(command)
+        main_verb = result[0].lower()
+        object_entity = result[1].lower()
+        path = ""
+        if (len(result) > 2):
+            path = result[len(result) - 1]
+        print(main_verb + " " + path)
+
+        # Match the identified components to terminal-like commands
+        matched_command = None
+        for cmd, (verb, entity) in command_mapping.items():
+            if main_verb == verb and object_entity == entity:
+                matched_command = cmd
+                break
+        if matched_command.startswith('rename'):
+            matched_command+=' '+result[len(result)-2]
+        elif matched_command.startswith('echo'):
+            matched_command+=' '+extract_strings_within_quotes(command)
+        elif path!= "":
+            matched_command += ' '+path
+        print(matched_command)
+        if matched_command.startswith('cd '):
+            return execute_cd(matched_command)
+
+        elif matched_command.startswith('touch '):
+            return execute_touch(matched_command)
+
+        elif matched_command.startswith('echo '):
+            return execute_echo(matched_command)
+
+        elif matched_command.startswith('pwd'):
+            return execute_pwd()
+
+        elif matched_command.startswith('mkdir '):
+            return execute_mkdir(matched_command)
+
+        elif matched_command.startswith('rm '):
+            return execute_rm(matched_command)
+
+        elif matched_command.startswith('cat '):
+            return execute_cat(matched_command)
+        elif matched_command.startswith('write '):
+            return execute_write(matched_command)
+
+        elif matched_command.startswith('rename '):
+            return execute_rename(matched_command)
+
+        elif matched_command == 'ls':
+            try:
+                result = subprocess.check_output(['ls'], stderr=subprocess.STDOUT, universal_newlines=True)
+                return jsonify({"result": result})
+            except subprocess.CalledProcessError as e:
+                return make_response(jsonify({"error": f"Error executing 'ls' command: {e.output}"}), 500)
+        return jsonify({"result": "NLP used"})
 
     return jsonify({"result": "Command not supported"})
-
-
 
 
 with app.app_context():
