@@ -49,6 +49,7 @@ This is a smart terminal-based website where normal terminal commands work fine,
 - **POST /execute_command** - Execute terminal-like commands
 
 ## Technologies Used
+- NLTK
 - Flask
 - SQLAlchemy
 - Flask-Bcrypt
