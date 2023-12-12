@@ -1,7 +1,7 @@
 # Terminal-based-website
 # Your Project Name
 
-Briefly describe your project here. This Flask application provides a user authentication system, file manipulation capabilities, and a terminal-like command execution feature.
+This is a smart terminal-based website where normal terminal commands work fine, but users can try human-like sentences like "List all files in the directory" and it will support this too.
 
 ## Table of Contents
 - [Features](#features)
