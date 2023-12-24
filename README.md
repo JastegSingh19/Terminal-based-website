@@ -1,6 +1,7 @@
 # Terminal-based-website
 This is a smart terminal-based website where normal terminal commands work fine, but users can try human-like sentences like "List all files in the directory" and it will support this too.
-# Demo Video - https://www.youtube.com/watch?v=kd6Y1YAf4Cw
+# Demo Video 
+[Youtube Video Preview](https://www.youtube.com/watch?v=kd6Y1YAf4Cw)
 ## Table of Contents
 - [Features](#features)
 - [Installation](#installation)
